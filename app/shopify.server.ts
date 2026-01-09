@@ -6,6 +6,7 @@ import {
 } from "@shopify/shopify-app-react-router/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
+import api from "./services/api.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -19,9 +20,28 @@ const shopify = shopifyApp({
   future: {
     expiringOfflineAccessTokens: true,
   },
-  ...(process.env.SHOP_CUSTOM_DOMAIN
-    ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] }
-    : {}),
+  customShopDomains: process.env.SHOP_CUSTOM_DOMAIN
+    ? [process.env.SHOP_CUSTOM_DOMAIN]
+    : undefined,
+  hooks: {
+    afterAuth: async ({ session }) => {
+      console.log("Syncing session to Laravel API:", session.shop);
+
+      try {
+        await api.post("/integrations/shopify/install", {
+          shop: session.shop,
+          access_token: session.accessToken,
+          access_token_expires_at: session.expires,
+          refresh_token: session.refreshToken,
+          refresh_token_expires_at: session.refreshTokenExpires,
+        });
+
+        console.log("Token synced successfully to Laravel");
+      } catch (error) {
+        console.error("Error syncing token to Laravel:", error);
+      }
+    },
+  },
 });
 
 export default shopify;
