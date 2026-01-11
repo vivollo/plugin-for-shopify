@@ -2,12 +2,11 @@
 
 client_id = "8de2b02dfd27e5a76ebfed691f41deba"
 name = "vivollo-ai-chatbot"
-application_url = "https://example.com"
+application_url = "https://shopifyapp.vivollo.com"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
-include_config_on_deploy = true
 
 [webhooks]
 api_version = "2026-01"
@@ -25,4 +24,4 @@ api_version = "2026-01"
 scopes = "read_legal_policies,read_content,read_online_store_pages,read_products,read_inventory,read_locations,read_orders,read_fulfillments,write_customers,read_customers,read_themes"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://shopifyapp.vivollo.com/api/auth" ]
