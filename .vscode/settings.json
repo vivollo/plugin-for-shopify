@@ -1,0 +1,15 @@
+{
+    "chat.mcp.serverSampling": {
+        "plugin-for-shopify/.vscode/mcp.json: shopify-dev-mcp": {
+            "allowedModels": []
+        }
+    },
+    "[typescriptreact]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
+}

@@ -1,0 +1,9 @@
+api_version = "2025-10"
+
+[[extensions]]
+uid = "ea13213e-6131-6da7-fe0b-b31668c7f03696dc7580"
+type = "theme_app_extension"
+name = "Vivollo Chat Widget"
+handle = "vivollo-chat-widget"
+
+[extensions.uischema]

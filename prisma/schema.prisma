@@ -33,4 +33,10 @@ model Session {
   refreshTokenExpires DateTime?
   vivolloAccessToken String?
   vivolloAccessTokenExpires DateTime?
+  channelId           String?
+  tenantName          String?
+  hasCustomizedWidget Boolean   @default(false)
+  hasPublishedWidget  Boolean   @default(false)
+  hasSyncedProducts   Boolean   @default(false)
+  widgetSettings      String?
 }

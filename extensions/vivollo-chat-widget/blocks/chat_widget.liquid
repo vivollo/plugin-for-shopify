@@ -1,0 +1,43 @@
+{% assign config = shop.metafields.vivollo.config.value %}
+
+{% if config and config.displayPosition != 'hidden' and config.channelId and config.tenantId %}
+<script type="module" src="{{ 'vivollo-chat-widget.js' | asset_url }}" async defer></script>
+<script>
+  document.addEventListener('vivollo:load', function (e) {
+    const vivollo = e.detail.vivollo;
+
+    vivollo.create({
+        tenantId: "{{ config.tenantId }}",
+        channelId: "{{ config.channelId }}",
+        debug: false,
+        display: {
+            mode: "sticky",
+            position: "{{ config.displayPosition | default: 'right' }}",
+        },
+        account: {
+          title: "{{ config.companyName | default: 'Vivollo' }}",
+          logo: "{{ config.logoUrl }}"
+        },
+        agent: {
+          avatar: "{{ config.logoUrl }}"
+        },
+        colors: {
+          primary: "{{ config.primaryColor }}"
+        },
+        texts: {
+          en: {
+            popup_message: "{{ config.popupMessage }}"
+          }
+        }
+    });
+  });
+</script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Vivollo Chat",
+  "target": "body",
+  "settings": []
+}
+{% endschema %}

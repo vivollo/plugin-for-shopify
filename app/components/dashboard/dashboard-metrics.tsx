@@ -1,57 +1,69 @@
-export function DashboardMetrics() {
-    return (
-        <s-section>
-            <s-heading>At a Glance</s-heading>
-            <s-grid
-                gridTemplateColumns="repeat(auto-fit, minmax(240px, 1fr))"
-                gap="base"
-            >
-                {/* Metric 1 */}
-                <s-clickable
-                    href="/app/health"
-                    border="base"
-                    borderRadius="base"
-                    padding="base"
-                >
-                    <s-grid gap="small-300">
-                        <s-heading>Widget Status</s-heading>
-                        <s-stack direction="inline" gap="small-200">
-                            <s-badge tone="critical">Inactive</s-badge>
-                        </s-stack>
-                    </s-grid>
-                </s-clickable>
+import { formatInt, pctChange, safeNumber } from "app/lib/report-utils";
+import { ReportsOverviewResponse } from "app/types/vivollo.types";
+import { FC, useMemo } from "react";
+import { KpiCard } from "../reports/kpi-card";
 
-                {/* Metric 2 */}
-                <s-clickable
-                    href="/app/sync"
-                    border="base"
-                    borderRadius="base"
-                    padding="base"
-                >
-                    <s-grid gap="small-300">
-                        <s-heading>Products Synced</s-heading>
-                        <s-stack direction="inline" gap="small-200">
-                            <s-text>0</s-text>
-                            <s-badge tone="neutral">Manual Sync Required</s-badge>
-                        </s-stack>
-                    </s-grid>
-                </s-clickable>
+type DashboardMetricsProps = {
+  reports: ReportsOverviewResponse["reports"];
+};
 
-                {/* Metric 3 */}
-                <s-clickable
-                    href="/app/plans"
-                    border="base"
-                    borderRadius="base"
-                    padding="base"
-                >
-                    <s-grid gap="small-300">
-                        <s-heading>Current Plan</s-heading>
-                        <s-stack direction="inline" gap="small-200">
-                            <s-text>Free Trial</s-text>
-                        </s-stack>
-                    </s-grid>
-                </s-clickable>
-            </s-grid>
-        </s-section>
-    );
-}
+export const DashboardMetrics: FC<DashboardMetricsProps> = ({ reports }) => {
+  const kpis = useMemo(() => {
+    const totalCurrent = safeNumber(reports.total_conversations.current?.[0]?.value);
+    const totalPrev = safeNumber(reports.total_conversations.previous?.[0]?.value);
+
+    const usersCurrent = safeNumber(reports.unique_users.current?.[0]?.value);
+    const usersPrev = safeNumber(reports.unique_users.previous?.[0]?.value);
+
+    const convPerUser = usersCurrent > 0 ? totalCurrent / usersCurrent : 0;
+    const convPerUserPrev = usersPrev > 0 ? totalPrev / usersPrev : 0;
+
+    const totalChange = pctChange(totalCurrent, totalPrev);
+    const usersChange = pctChange(usersCurrent, usersPrev);
+    const convPerUserChange = pctChange(convPerUser, convPerUserPrev);
+
+    return {
+      totalCurrent,
+      totalPrev,
+      totalChange,
+      usersCurrent,
+      usersPrev,
+      usersChange,
+      convPerUser,
+      convPerUserChange,
+    };
+  }, [reports]);
+
+  return (
+    <s-section padding="base">
+      <s-grid
+        gridTemplateColumns="@container (inline-size <= 600px) 1fr, 1fr auto 1fr auto 1fr auto 1fr"
+        gap="small"
+      >
+        <KpiCard
+          title="Total conversations"
+          value={formatInt(kpis.totalCurrent)}
+          delta={kpis.totalChange}
+        />
+        <s-divider direction="block" />
+        <KpiCard
+          title="Unique users"
+          value={formatInt(kpis.usersCurrent)}
+          delta={kpis.usersChange}
+        />
+        <s-divider direction="block" />
+        <KpiCard
+          title="Conversations / user"
+          value={kpis.convPerUser.toFixed(2)}
+          delta={kpis.convPerUserChange}
+        />
+        <s-divider direction="block" />
+        <KpiCard
+          title="Engagement signal"
+          value={kpis.totalCurrent > 0 ? "Active" : "No activity"}
+          delta={null}
+        />
+      </s-grid>
+    </s-section>
+  );
+};
