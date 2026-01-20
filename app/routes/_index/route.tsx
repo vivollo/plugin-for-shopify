@@ -21,9 +21,12 @@ export default function App() {
   return (
     <div className={styles.index}>
       <div className={styles.content}>
-        <h1 className={styles.heading}>A short heading about [your app]</h1>
+        <h1 className={styles.heading}>
+          Vivollo for Shopify: AI-powered customer messaging
+        </h1>
         <p className={styles.text}>
-          A tagline about [your app] that describes your value proposition.
+          Turn store conversations into sales with an AI agent that answers,
+          qualifies, and hands off to your team when needed.
         </p>
         {showForm && (
           <Form className={styles.form} method="post" action="/auth/login">
@@ -33,22 +36,22 @@ export default function App() {
               <span>e.g: my-shop-domain.myshopify.com</span>
             </label>
             <button className={styles.button} type="submit">
-              Log in
+              Connect Shopify store
             </button>
           </Form>
         )}
         <ul className={styles.list}>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>AI agent in minutes</strong>. Launch a branded, knowledgeable
+            assistant trained on your products and policies.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Live agent handoff</strong>. Escalate complex questions to
+            your team with full conversation context.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Sales-ready insights</strong>. Capture intent signals and
+            improve conversion from every chat.
           </li>
         </ul>
       </div>
