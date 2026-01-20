@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { useLoaderData } from "react-router";
+import { Await } from "react-router";
 import { authenticate } from "../shopify.server";
 import { WidgetService } from "../services/widget.server";
 import { OnboardingChecklist } from "../components/dashboard/onboarding-checklist";
@@ -10,61 +10,101 @@ import { HealthCheck } from "app/components/dashboard/health-check";
 import { DashboardMetrics } from "app/components/dashboard/dashboard-metrics";
 import { format } from "date-fns";
 import { LoginVivolloButton } from "app/components/dashboard/login-vivollo-button";
+import { Fragment } from "react/jsx-runtime";
+import { Suspense } from "react";
+import { Route } from "./+types/app._index";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session, admin } = await authenticate.admin(request);
-  const dbSession = await SessionService.findByIdOrFail(session.id);
+	const { session, admin } = await authenticate.admin(request);
+	const dbSession = await SessionService.findByIdOrFail(session.id);
 
-  if (!dbSession.vivolloAccessToken || !dbSession.tenantName) {
-    throw new Error("Missing Vivollo credentials");
-  }
+	if (!dbSession.vivolloAccessToken || !dbSession.tenantName) {
+		return { shop: session.shop, error: "Missing Vivollo credentials" };
+	}
 
-  const fromDate = new Date().setDate(new Date().getDate() - 7);
-  const toDate = new Date().setDate(new Date().getDate() - 1);
+	const token = dbSession.vivolloAccessToken;
+	const tenant = dbSession.tenantName;
 
-  const [onboardingStatus, collectionGroups, reportsOverview] = await Promise.all([
-    WidgetService.getOnboardingStatus(admin, session.id, session.shop),
-    CollectionService.getCollectionGroups(dbSession.vivolloAccessToken, dbSession.tenantName),
-    ReportsService.getOverview(
-      dbSession.vivolloAccessToken,
-      dbSession.tenantName,
-      format(fromDate, "yyyy-MM-dd"),
-      format(toDate, "yyyy-MM-dd")
-    ),
-  ]);
+	const fromDate = new Date();
+	fromDate.setDate(fromDate.getDate() - 7);
 
-  return {
-    shop: session.shop,
-    onboardingStatus,
-    collectionGroups,
-    reportsOverview,
-  };
+	const toDate = new Date();
+	toDate.setDate(toDate.getDate() - 1);
+
+	const onboardingStatus = WidgetService.getOnboardingStatus(
+		admin,
+		session.id,
+		session.shop,
+	);
+
+	const collectionGroups = CollectionService.getCollectionGroups(token, tenant);
+
+	const reportsOverview = ReportsService.getOverview(
+		token,
+		tenant,
+		format(fromDate, "yyyy-MM-dd"),
+		format(toDate, "yyyy-MM-dd"),
+	);
+
+	// simulate async delay
+	const delay = new Promise((resolve) => setTimeout(resolve, 3000));
+
+	return {
+		shop: session.shop,
+		onboardingStatus,
+		collectionGroups,
+		reportsOverview,
+		delay,
+	};
 };
 
-export default function Index() {
-  const { shop, collectionGroups, onboardingStatus, reportsOverview } =
-    useLoaderData<typeof loader>();
+export default function Index({ loaderData }: Route.ComponentProps) {
+	const { shop, delay, onboardingStatus, collectionGroups, reportsOverview } =
+		loaderData;
 
-  return (
-    <s-page heading="Vivollo">
-      <LoginVivolloButton />
+	return (
+		<s-page heading="Vivollo">
+			<LoginVivolloButton />
 
-      <s-stack gap="base">
-        <OnboardingChecklist
-          shop={shop}
-          hasCustomizedWidget={onboardingStatus.hasCustomizedWidget}
-          hasPublishedWidget={onboardingStatus.hasPublishedWidget}
-          hasSyncedProducts={onboardingStatus.hasSyncedProducts}
-          extensionDeepLink={onboardingStatus.extensionDeepLink}
-        />
+			<s-stack gap="base">
+				<Suspense fallback={<s-paragraph>Loading...</s-paragraph>}>
+					<Await resolve={delay}>{() => <div>Delayed</div>}</Await>
+				</Suspense>
 
-        <HealthCheck
-          collectionGroups={collectionGroups}
-          hasPublishedWidget={onboardingStatus.hasPublishedWidget}
-        />
+				<Suspense fallback={<s-paragraph>Loading...</s-paragraph>}>
+					<Await resolve={onboardingStatus}>
+						{(resolvedOnboardingStatus) =>
+							resolvedOnboardingStatus && (
+								<Fragment>
+									<OnboardingChecklist
+										shop={shop}
+										status={resolvedOnboardingStatus}
+									/>
 
-        <DashboardMetrics reports={reportsOverview.reports} />
-      </s-stack>
-    </s-page>
-  );
+									<Await resolve={collectionGroups}>
+										{(resolvedCollectionGroups) => (
+											<HealthCheck
+												collectionGroups={resolvedCollectionGroups}
+												hasPublishedWidget={
+													resolvedOnboardingStatus?.hasPublishedWidget
+												}
+											/>
+										)}
+									</Await>
+								</Fragment>
+							)
+						}
+					</Await>
+				</Suspense>
+
+				<Suspense fallback={<div>Loading...</div>}>
+					<Await resolve={reportsOverview}>
+						{(resolvedReportsOverview) => (
+							<DashboardMetrics reports={resolvedReportsOverview?.reports} />
+						)}
+					</Await>
+				</Suspense>
+			</s-stack>
+		</s-page>
+	);
 }

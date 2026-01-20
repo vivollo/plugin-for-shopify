@@ -2,7 +2,6 @@ import "@shopify/shopify-app-react-router/adapters/node";
 import { ApiVersion, AppDistribution, shopifyApp } from "@shopify/shopify-app-react-router/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
-import api from "./services/api.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -17,51 +16,6 @@ const shopify = shopifyApp({
     expiringOfflineAccessTokens: true,
   },
   customShopDomains: process.env.SHOP_CUSTOM_DOMAIN ? [process.env.SHOP_CUSTOM_DOMAIN] : undefined,
-  hooks: {
-    afterAuth: async ({ session }) => {
-      console.log("Syncing session to Laravel API:", session.shop);
-
-      try {
-        const response = await api.post("/integrations/shopify/install", {
-          shop: session.shop,
-          access_token: session.accessToken,
-          access_token_expires_at: session.expires,
-          refresh_token: session.refreshToken,
-          refresh_token_expires_at: session.refreshTokenExpires,
-        });
-
-        const { tenant, channel_id, access_token } = response.data;
-
-        let expiresAt = null;
-        if (access_token) {
-          try {
-            const payload = JSON.parse(
-              Buffer.from(access_token.split(".")[1], "base64").toString()
-            );
-            if (payload.exp) {
-              expiresAt = new Date(payload.exp * 1000);
-            }
-          } catch (e) {
-            console.error("Failed to parse JWT expiration:", e);
-          }
-        }
-
-        await prisma.session.updateMany({
-          where: { shop: session.shop },
-          data: {
-            tenantName: tenant,
-            channelId: channel_id,
-            vivolloAccessToken: access_token,
-            vivolloAccessTokenExpires: expiresAt,
-          },
-        });
-
-        console.log("Token and tenant details synced successfully to Laravel and local DB");
-      } catch (error) {
-        console.error("Error syncing token to Laravel:", error);
-      }
-    },
-  },
 });
 
 export default shopify;

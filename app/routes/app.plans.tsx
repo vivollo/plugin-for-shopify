@@ -24,6 +24,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
-export default function PlansRedirect() {
+export default function Plans() {
   return null;
 }

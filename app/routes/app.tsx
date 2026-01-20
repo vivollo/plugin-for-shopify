@@ -4,35 +4,59 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
 import { authenticate } from "../shopify.server";
+import { SessionService } from "app/services/session.server";
+import { isAfter, parseISO, subSeconds } from "date-fns";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+	const { session } = await authenticate.admin(request);
+	const dbSession = await SessionService.findByIdOrFail(session.id);
 
-  // eslint-disable-next-line no-undef
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+	const expiresAt =
+		typeof dbSession.vivolloAccessTokenExpires === "string"
+			? parseISO(dbSession.vivolloAccessTokenExpires)
+			: dbSession.vivolloAccessTokenExpires;
+
+	const nowWithSkew = subSeconds(new Date(), 60); // 60sn buffer
+
+	const tokenIsValid =
+		!!dbSession.vivolloAccessToken &&
+		!!dbSession.tenantName &&
+		!!dbSession.vivolloAccessTokenExpires &&
+		!!expiresAt &&
+		isAfter(expiresAt, nowWithSkew);
+
+	if (!tokenIsValid) {
+		console.log("Syncing session to Laravel API:", session.shop);
+
+		SessionService.syncToken(session);
+	}
+
+	return {
+		apiKey: process.env.SHOPIFY_API_KEY || "",
+	};
 };
 
 export default function App() {
-  const { apiKey } = useLoaderData<typeof loader>();
+	const { apiKey } = useLoaderData<typeof loader>();
 
-  return (
-    <AppProvider embedded apiKey={apiKey}>
-      <s-app-nav>
-        <s-link href="/app">Dashboard</s-link>
-        <s-link href="/app/collections">Collections</s-link>
-        <s-link href="/app/plans-redirect">Plans</s-link>
-        <s-link href="/app/settings">Settings</s-link>
-      </s-app-nav>
-      <Outlet />
-    </AppProvider>
-  );
+	return (
+		<AppProvider embedded apiKey={apiKey}>
+			<s-app-nav>
+				<s-link href="/app">Dashboard</s-link>
+				<s-link href="/app/collections">Collections</s-link>
+				<s-link href="/app/plans">Plans</s-link>
+				<s-link href="/app/settings">Settings</s-link>
+			</s-app-nav>
+			<Outlet />
+		</AppProvider>
+	);
 }
 
 // Shopify needs React Router to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
-  return boundary.error(useRouteError());
+	return boundary.error(useRouteError());
 }
 
 export const headers: HeadersFunction = (headersArgs) => {
-  return boundary.headers(headersArgs);
+	return boundary.headers(headersArgs);
 };
