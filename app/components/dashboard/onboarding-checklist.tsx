@@ -158,3 +158,17 @@ export function OnboardingChecklist({
 		</s-section>
 	);
 }
+
+OnboardingChecklist.Skeleton = () => {
+	return (
+		<s-section>
+			<s-grid gap="base">
+				<s-grid gap="small-200">
+					<s-heading>Getting started</s-heading>
+				</s-grid>
+
+				<s-spinner />
+			</s-grid>
+		</s-section>
+	);
+};

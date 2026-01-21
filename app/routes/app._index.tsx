@@ -16,7 +16,13 @@ import { Route } from "./+types/app._index";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
 	const { session, admin } = await authenticate.admin(request);
-	const dbSession = await SessionService.findByIdOrFail(session.id);
+
+	let dbSession = await SessionService.findByIdOrFail(session.id);
+	const isTokenValid = await SessionService.isTokenValid(dbSession);
+
+	if (!isTokenValid) {
+		dbSession = await SessionService.syncToken(session);
+	}
 
 	if (!dbSession.vivolloAccessToken || !dbSession.tenantName) {
 		return { shop: session.shop, error: "Missing Vivollo credentials" };
@@ -46,20 +52,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 		format(toDate, "yyyy-MM-dd"),
 	);
 
-	// simulate async delay
-	const delay = new Promise((resolve) => setTimeout(resolve, 3000));
-
 	return {
 		shop: session.shop,
 		onboardingStatus,
 		collectionGroups,
 		reportsOverview,
-		delay,
 	};
 };
 
 export default function Index({ loaderData }: Route.ComponentProps) {
-	const { shop, delay, onboardingStatus, collectionGroups, reportsOverview } =
+	const { shop, onboardingStatus, collectionGroups, reportsOverview } =
 		loaderData;
 
 	return (
@@ -67,11 +69,14 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 			<LoginVivolloButton />
 
 			<s-stack gap="base">
-				<Suspense fallback={<s-paragraph>Loading...</s-paragraph>}>
-					<Await resolve={delay}>{() => <div>Delayed</div>}</Await>
-				</Suspense>
-
-				<Suspense fallback={<s-paragraph>Loading...</s-paragraph>}>
+				<Suspense
+					fallback={
+						<Fragment>
+							<OnboardingChecklist.Skeleton />
+							<HealthCheck.Skeleton />
+						</Fragment>
+					}
+				>
 					<Await resolve={onboardingStatus}>
 						{(resolvedOnboardingStatus) =>
 							resolvedOnboardingStatus && (
@@ -97,11 +102,13 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 					</Await>
 				</Suspense>
 
-				<Suspense fallback={<div>Loading...</div>}>
+				<Suspense fallback={<DashboardMetrics.Skeleton />}>
 					<Await resolve={reportsOverview}>
-						{(resolvedReportsOverview) => (
-							<DashboardMetrics reports={resolvedReportsOverview?.reports} />
-						)}
+						{(resolvedReportsOverview) =>
+							resolvedReportsOverview && (
+								<DashboardMetrics reports={resolvedReportsOverview?.reports} />
+							)
+						}
 					</Await>
 				</Suspense>
 			</s-stack>

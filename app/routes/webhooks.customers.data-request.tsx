@@ -1,11 +1,16 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
+import { SlackService } from "app/services/slack.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { shop, topic } = await authenticate.webhook(request);
+	const { shop, topic, payload } = await authenticate.webhook(request);
 
-  console.log(`Received ${topic} webhook for ${shop}`);
-  // Manual follow-up: we will handle this request outside the app.
+	console.log(`Received ${topic} webhook for ${shop}`);
 
-  return new Response();
+	const prettyPayload = JSON.stringify(payload, null, 2);
+	SlackService.sendMessage(
+		`[Shopify App]: Customer ${shop} requested their data. ${topic}\n\`\`\`\n${prettyPayload}\n\`\`\``,
+	);
+
+	return new Response();
 };

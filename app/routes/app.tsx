@@ -2,34 +2,10 @@ import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { Outlet, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
-
 import { authenticate } from "../shopify.server";
-import { SessionService } from "app/services/session.server";
-import { isAfter, parseISO, subSeconds } from "date-fns";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-	const { session } = await authenticate.admin(request);
-	const dbSession = await SessionService.findByIdOrFail(session.id);
-
-	const expiresAt =
-		typeof dbSession.vivolloAccessTokenExpires === "string"
-			? parseISO(dbSession.vivolloAccessTokenExpires)
-			: dbSession.vivolloAccessTokenExpires;
-
-	const nowWithSkew = subSeconds(new Date(), 60); // 60sn buffer
-
-	const tokenIsValid =
-		!!dbSession.vivolloAccessToken &&
-		!!dbSession.tenantName &&
-		!!dbSession.vivolloAccessTokenExpires &&
-		!!expiresAt &&
-		isAfter(expiresAt, nowWithSkew);
-
-	if (!tokenIsValid) {
-		console.log("Syncing session to Laravel API:", session.shop);
-
-		SessionService.syncToken(session);
-	}
+	await authenticate.admin(request);
 
 	return {
 		apiKey: process.env.SHOPIFY_API_KEY || "",
